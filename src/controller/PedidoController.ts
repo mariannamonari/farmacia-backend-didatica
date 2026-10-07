@@ -1,4 +1,6 @@
-import { Pedido, type ItemDTO } from "../model/Pedido.js";
+import { Pedido } from "../model/Pedido.js";
+import type PedidoDTO from "../dto/PedidoDTO.js";
+import type ItemPedidoDTO from "../dto/ItemVendaDTO.js";
 import type { Request, Response } from "express";
 
 class PedidoController extends Pedido {
@@ -27,37 +29,44 @@ class PedidoController extends Pedido {
 
   static async novo(req: Request, res: Response): Promise<any> {
     try {
-      const { idCliente, itens } = req.body as { idCliente: number; itens: ItemDTO[] };
-      if (!idCliente || !Array.isArray(itens) || itens.length === 0) {
-        return res.status(400).json({ mensagem: "idCliente e itens são obrigatórios." });
-      }
-      const idVenda = await Pedido.criarPedidoComItens(Number(idCliente), itens);
+      const dadosPedido = req.body as PedidoDTO;
+      const itensPedido = Array.isArray(dadosPedido.itens)
+        ? dadosPedido.itens
+        : [dadosPedido.itens];
+
+      const idVenda = await Pedido.criarPedidoComItens(
+        dadosPedido.idCliente,
+        itensPedido
+      );
       if (!idVenda) return res.status(400).json({ mensagem: "Erro ao criar pedido." });
-      return res.status(201).json({ idVenda, mensagem: "Pedido criado com sucesso.", totalItens: itens.length });
+      return res.status(201).json({ idVenda, mensagem: "Pedido criado com sucesso.", totalItens: itensPedido.length });
     } catch (error: any) {
       const msg = String(error?.message ?? error);
       const isEstoque = msg.toLowerCase().includes("estoque insuficiente");
+      const isInvalid = msg.toLowerCase().includes("inválido") || msg.toLowerCase().includes("obrigatória") || msg.toLowerCase().includes("obrigatório");
       console.error(`Erro ao criar pedido: ${msg}`);
-      return res.status(isEstoque ? 400 : 500).json({ mensagem: msg });
+      return res.status(isEstoque ? 400 : isInvalid ? 400 : 500).json({ mensagem: msg });
     }
   }
 
   static async novoItem(req: Request, res: Response): Promise<any> {
     try {
       const idVenda = Number(req.params.id);
-      const { idProduto, qtdProduto, precoUnit } = req.body as ItemDTO;
-      if (!idProduto || !qtdProduto || typeof precoUnit !== "number") {
-        return res.status(400).json({ mensagem: "idProduto, qtdProduto e precoUnit são obrigatórios." });
-      }
-      const ok = await Pedido.adicionarItem(idVenda, { idProduto, qtdProduto, precoUnit });
+      const item = req.body as ItemPedidoDTO;
+      const ok = await Pedido.adicionarItem(idVenda, {
+        idProduto: item.idProduto,
+        qtdProduto: item.qtdProduto,
+        precoUnit: item.precoUnit,
+      });
       return ok
         ? res.status(201).json({ mensagem: "Item adicionado com sucesso." })
         : res.status(400).json({ mensagem: "Não foi possível adicionar o item." });
     } catch (error: any) {
       const msg = String(error?.message ?? error);
       const isEstoque = msg.toLowerCase().includes("estoque insuficiente");
+      const isInvalid = msg.toLowerCase().includes("inválido") || msg.toLowerCase().includes("obrigatória") || msg.toLowerCase().includes("obrigatório");
       console.error(`Erro ao adicionar item: ${msg}`);
-      return res.status(isEstoque ? 400 : 500).json({ mensagem: msg });
+      return res.status(isEstoque ? 400 : isInvalid ? 400 : 500).json({ mensagem: msg });
     }
   }
 

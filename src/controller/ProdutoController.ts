@@ -1,4 +1,5 @@
 import { Produto } from "../model/Produto.js";
+import type ProdutoDTO from "../dto/ProdutoDTO.js";
 import type { Request, Response } from "express";
 
 class ProdutoController extends Produto {
@@ -25,7 +26,7 @@ class ProdutoController extends Produto {
 
     static async novo(req: Request, res: Response): Promise<Response> {
         try {
-            const dadosRecebidos = req.body;
+            const dadosRecebidos = req.body as ProdutoDTO;
             const produto = new Produto(
                 dadosRecebidos.descricao,
                 dadosRecebidos.preco,
@@ -41,8 +42,10 @@ class ProdutoController extends Produto {
                 return res.status(400).json({ mensagem: "Erro ao cadastrar produto." });
             }
         } catch (error) {
+            const mensagem = error instanceof Error ? error.message : "Erro ao inserir produto.";
+            const status = mensagem.toLowerCase().includes("obrigatória") || mensagem.toLowerCase().includes("inválido") ? 400 : 500;
             console.error(`Erro ao cadastrar produto: ${error}`);
-            return res.status(500).json({ mensagem: "Erro ao inserir produto." });
+            return res.status(status).json({ mensagem });
         }
     }
 
@@ -54,8 +57,14 @@ class ProdutoController extends Produto {
             if (isNaN(idProduto)) {
                 return res.status(400).json({ erro: 'ID do produto inválido' });
             }
-            const campos = req.body;
-            const atualizado = await Produto.atualizarProduto(idProduto, campos);
+            const campos = req.body as ProdutoDTO;
+            const atualizado = await Produto.atualizarProduto(idProduto, {
+                descricao: campos.descricao,
+                validade: campos.validade,
+                preco: campos.preco,
+                qtdEstoque: campos.qtdEstoque,
+                qtdMinEstoque: campos.qtdMinEstoque,
+            });
             console.log(idProduto, campos);
 
             if (atualizado) {
@@ -64,8 +73,10 @@ class ProdutoController extends Produto {
                 return res.status(400).json({ mensagem: "Erro ao atualizar produto." });
             }
         } catch (error) {
+            const mensagem = error instanceof Error ? error.message : "Erro ao atualizar produto.";
+            const status = mensagem.toLowerCase().includes("obrigatória") || mensagem.toLowerCase().includes("inválido") ? 400 : 500;
             console.error(`Erro ao atualizar produto: ${error}`);
-            return res.status(500).json({ mensagem: "Erro ao atualizar produto." });
+            return res.status(status).json({ mensagem });
         }
     }
 }

@@ -1,4 +1,5 @@
 import { ItemPedido } from "../model/ItemPedido.js";
+import type ItemPedidoDTO from "../dto/ItemVendaDTO.js";
 import type { Request, Response } from "express";
 
 class ItemPedidoController extends ItemPedido {
@@ -16,9 +17,9 @@ class ItemPedidoController extends ItemPedido {
 
     static async novo(req: Request, res: Response): Promise<Response> {
         try {
-            const dados = req.body;
+            const dados = req.body as ItemPedidoDTO;
             const item = new ItemPedido(
-                dados.idVenda,
+                dados.idVenda ?? 0,
                 dados.idProduto,
                 dados.qtdProduto,
                 dados.precoUnit
@@ -31,8 +32,9 @@ class ItemPedidoController extends ItemPedido {
         } catch (error: any) {
             const msg = String(error?.message ?? error);
             const isEstoque = msg.toLowerCase().includes("estoque insuficiente");
+            const isInvalid = msg.toLowerCase().includes("inválido") || msg.toLowerCase().includes("obrigatória") || msg.toLowerCase().includes("obrigatório");
             console.error(`Erro ao adicionar item: ${msg}`);
-            return res.status(isEstoque ? 400 : 500).json({ mensagem: msg });
+            return res.status(isEstoque ? 400 : isInvalid ? 400 : 500).json({ mensagem: msg });
         }
     }
 
@@ -40,7 +42,7 @@ class ItemPedidoController extends ItemPedido {
         try {
             const idVenda = Number(req.params.idVenda);
             const idProduto = Number(req.params.idProduto);
-            const campos = req.body;
+            const campos = req.body as Partial<{ qtdProduto: number; precoUnit: number }>;
             const ok = await ItemPedido.atualizarItem(idVenda, idProduto, campos);
 
             return ok
