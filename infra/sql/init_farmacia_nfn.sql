@@ -1,10 +1,5 @@
--- ===========================
--- LIMPEZA (opcional em dev)
--- ===========================
-DROP TRIGGER IF EXISTS trg_baixa_estoque ON item_venda;
-DROP FUNCTION IF EXISTS fn_baixa_estoque();
-
 DROP TABLE IF EXISTS item_venda CASCADE;
+DROP FUNCTION IF EXISTS fn_baixa_estoque();
 DROP TABLE IF EXISTS venda CASCADE;
 DROP TABLE IF EXISTS produto CASCADE;
 DROP TABLE IF EXISTS cliente CASCADE;
